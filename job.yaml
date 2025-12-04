@@ -1,0 +1,32 @@
+kind: Job
+apiVersion: batch/v1
+metadata:
+  name: nginx-job
+  namespace: nginx-test
+spec:
+  completions: 1
+  parallelism: 1
+  template:
+    metadata:
+      labels:
+        app: batch-task
+    spec:
+      containers:
+        - name: batch-container
+          image: busybox
+          command: ["sh", "-c", "echo Hello, Kubernetes! && sleep 30"]
+          resources:
+            limits:
+              memory: "256Mi"
+              cpu: "1"
+            requests:
+              memory: "128Mi"
+              cpu: "500m"
+      restartPolicy: Never
+
+# This Job definition creates a Job named "nginx-job" in the "nginx-test" namespace.
+# The Job runs a BusyBox container that prints "Hello, Kubernetes!" and then sleeps for 30 seconds.
+# The Job is configured to complete once with a single parallel execution.
+# Resource requests and limits are defined for CPU and memory to ensure proper resource allocation.
+# The restart policy is set to "Never", meaning that failed Pods will not be restarted.
+# Kubernetes Job is used to run batch processing tasks that are expected to terminate after completion. live example use cases include data processing, backups, and report generation. 

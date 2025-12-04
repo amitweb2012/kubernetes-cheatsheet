@@ -1,0 +1,23 @@
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+nodes:
+  - role: control-plane
+    image: kindest/node:v1.33.1
+  - role: worker
+    image: kindest/node:v1.33.1
+  - role: worker
+    image: kindest/node:v1.33.1
+  - role: worker
+    image: kindest/node:v1.33.1
+    extraPortMappings:
+      - containerPort: 80
+        hostPort: 80
+        protocol: TCP
+      - containerPort: 443
+        hostPort: 443
+        protocol: TCP
+
+# This configuration file defines a Kubernetes cluster using KinD (Kubernetes in Docker).
+# The cluster consists of one control-plane node and three worker nodes, all running the Kubernetes version v1.33.1.
+# The third worker node has extra port mappings to expose ports 80 and 443 from the container to the host machine, allowing access to services running on those ports.
+# KinD is a tool for running local Kubernetes clusters using Docker container "nodes", primarily designed for testing and development purposes.

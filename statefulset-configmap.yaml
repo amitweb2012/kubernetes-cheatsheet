@@ -1,0 +1,100 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: mysql-test
+
+---
+# 🧠 ConfigMap for MySQL configuration
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mysql-config
+  namespace: mysql-test
+data:
+  MYSQL_DATABASE: mydb
+  MYSQL_USER: myuser
+  MYSQL_PASSWORD: mypassword
+  MYSQL_ROOT_PASSWORD: rootpassword
+
+---
+# 🧱 Headless Service for StatefulSet (stable network identity)
+apiVersion: v1
+kind: Service
+metadata:
+  name: mysql
+  namespace: mysql-test
+  labels:
+    app: mysql
+spec:
+  clusterIP: None # headless service
+  ports:
+    - port: 3306
+      name: mysql
+  selector:
+    app: mysql
+
+---
+# 💾 PersistentVolumeClaim for MySQL data
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mysql-pvc
+  namespace: mysql-test
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 2Gi
+  storageClassName: standard # adjust if using another storage class (like "local-path" in kind)
+
+---
+# 🧩 StatefulSet for MySQL
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: mysql
+  namespace: mysql-test
+spec:
+  serviceName: mysql
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mysql
+  template:
+    metadata:
+      labels:
+        app: mysql
+    spec:
+      containers:
+        - name: mysql
+          image: mysql:8.0
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 3306
+              name: mysql
+          envFrom:
+            - configMapRef:
+                name: mysql-config
+          volumeMounts:
+            - name: mysql-storage
+              mountPath: /var/lib/mysql
+          livenessProbe:
+            exec:
+              command: ["mysqladmin", "ping", "-h", "localhost"]
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+          readinessProbe:
+            exec:
+              command: ["mysqladmin", "ping", "-h", "localhost"]
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 5
+      volumes:
+        - name: mysql-storage
+          persistentVolumeClaim:
+            claimName: mysql-pvc
+# port forwarding
+# kubectl port-forward --namespace mysql-test statefulset/mysql 3306:3306

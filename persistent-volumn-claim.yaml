@@ -1,0 +1,19 @@
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: local-pvc
+  namespace: nginx-test
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: local-storage
+  resources:
+    requests:
+      storage: 1Gi
+  volumeName: local-pv
+
+# This PersistentVolumeClaim (PVC) definition creates a PVC named "local-pvc" in the "nginx-test" namespace.
+# The PVC requests 1Gi of storage with ReadWriteOnce access mode, meaning it can be mounted as read-write by a single node.
+# It specifies a storage class named "local-storage" and binds to a PersistentVolume named "local-pv".
+# Kubernetes PVCs are used to request storage resources from the cluster, allowing Pods to use persistent storage that outlives their lifecycle.
+# This PVC can be used by Pods to mount the specified PersistentVolume for data storage.

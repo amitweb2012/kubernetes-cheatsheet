@@ -1,0 +1,22 @@
+kind: PersistentVolume
+apiVersion: v1
+metadata:
+  name: local-pv
+  namespace: nginx-test
+spec:
+  capacity:
+    storage: 1Gi
+  accessModes:
+    - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: local-storage
+  hostPath:
+    path: /mnt/data
+    type: DirectoryOrCreate
+
+# This PersistentVolume (PV) definition creates a PV named "local-pv" in the "nginx-test" namespace.
+# The PV has a capacity of 1Gi and allows ReadWriteOnce access mode, meaning it can be mounted as read-write by a single node.
+# The persistentVolumeReclaimPolicy is set to "Retain", which means the PV will not be deleted automatically when the associated PersistentVolumeClaim (PVC) is deleted.
+# The PV uses a hostPath volume type, which maps to a directory on the host node's filesystem at /mnt/data.
+# Kubernetes PVs are used to provide persistent storage to Pods, allowing data to persist beyond the lifecycle of individual Pods.
+# PV use cases include databases, file storage, and any application requiring durable storage.

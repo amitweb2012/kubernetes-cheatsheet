@@ -1,0 +1,24 @@
+kind: Pod
+apiVersion: v1
+metadata:
+  name: nginx-pod
+  namespace: nginx-test
+spec:
+  containers:
+    - name: nginx-container
+      image: nginx:latest
+      ports:
+        - containerPort: 80
+      resources:
+        limits:
+          memory: "128Mi"
+          cpu: "500m"
+        requests:
+          memory: "64Mi"
+          cpu: "250m"
+  restartPolicy: Always
+
+# This Pod definition creates a single Pod named "nginx-pod" in the "nginx-test" namespace.
+# The Pod runs an Nginx container exposing port 80 and has resource requests and limits defined for CPU and memory.
+# The restart policy is set to "Always", ensuring the Pod is restarted automatically if it fails.
+# Kubernetes Pod is the smallest deployable unit that can be created and managed in Kubernetes.

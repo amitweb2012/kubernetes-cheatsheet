@@ -1,0 +1,46 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: apache-nginx-ingress
+  namespace: ingress-test
+  annotations:
+    nginx.ingress.kubernetes.io/use-regex: "true"
+    nginx.ingress.kubernetes.io/rewrite-target: /$2
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: "tws.local"
+      http:
+        paths:
+          # Redirect root "/" to "/apache"
+          - path: /$
+            pathType: Prefix
+            backend:
+              service:
+                name: apache-service
+                port:
+                  number: 80
+          - path: /apache(/|$)(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: apache-service
+                port:
+                  number: 80
+          - path: /nginx(/|$)(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: nginx-service
+                port:
+                  number: 80
+
+# This Ingress definition creates an Ingress resource named "apache-nginx-ingress" in the "ingress-test" namespace.
+# It uses the NGINX Ingress controller to manage incoming HTTP traffic based on defined rules.
+# The Ingress routes traffic for the host "tws.local" to two different services based on the URL path:
+# 1. Requests to the root path "/" are redirected to the Apache service.
+# 2. Requests to paths starting with "/apache" are routed to the Apache service.
+# 3. Requests to paths starting with "/nginx" are routed to the Nginx service.
+# The rewrite-target annotation is used to modify the request URL before forwarding it to the backend services.
+# Kubernetes Ingress is used to expose HTTP and HTTPS routes from outside the cluster to services within the cluster, providing load balancing, SSL termination, and name-based virtual hosting. 
+# Relive example use cases include hosting multiple web applications under different paths or subdomains using a single Ingress resource.

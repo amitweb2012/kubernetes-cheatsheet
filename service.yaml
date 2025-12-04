@@ -1,0 +1,17 @@
+kind: Service
+apiVersion: v1
+metadata:
+  name: nginx-service
+  namespace: nginx-test
+spec:
+  selector:
+    app: nginx
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 80
+  type: ClusterIP
+
+# This Service definition creates a ClusterIP service named "nginx-service" in the "nginx-test" namespace.
+# It selects pods with the label "app: nginx" and exposes port 80, directing traffic to the same port on the selected pods.
+# kuberneres service used to expose an application running on a set of Pods within the cluster.

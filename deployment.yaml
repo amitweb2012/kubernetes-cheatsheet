@@ -1,0 +1,42 @@
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: nginx-deployment
+  namespace: nginx-test
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: nginx
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      containers:
+        - name: nginx-container
+          image: nginx:latest
+          ports:
+            - containerPort: 80
+          volumeMounts:
+            - name: my-volume
+              mountPath: /var/www/html
+      volumes:
+        - name: my-volume
+          persistentVolumeClaim:
+            claimName: local-pvc
+      resources:
+        limits:
+          memory: "512Mi"
+          cpu: "1"
+        requests:
+          memory: "256Mi"
+          cpu: "500m"
+      restartPolicy: Always
+
+# This Deployment definition creates a Deployment named "nginx-deployment" in the "nginx-test" namespace.
+# It manages 3 replicas of Pods running an Nginx container, exposing port 80.
+# The Pods use a PersistentVolumeClaim named "local-pvc" to mount storage at /var/www/html.
+# Resource requests and limits are defined for CPU and memory to ensure proper resource allocation.
+# The restart policy is set to "Always", ensuring that the Pods are restarted automatically if they fail.
+# Kubernetes Deployment provides declarative updates for Pods and ReplicaSets, allowing for easy scaling and management of application deployments.

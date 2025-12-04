@@ -1,0 +1,34 @@
+kind: DaemonSet
+apiVersion: apps/v1
+metadata:
+  name: nginx-daemonset
+  namespace: nginx-test
+spec:
+  selector:
+    matchLabels:
+      app: nginx
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      containers:
+        - name: nginx-container
+          image: nginx:latest
+          ports:
+            - containerPort: 80
+          resources:
+            limits:
+              memory: "256Mi"
+              cpu: "1"
+            requests:
+              memory: "128Mi"
+              cpu: "500m"
+
+# This DaemonSet definition creates a DaemonSet named "nginx-daemonset" in the "nginx-test" namespace.
+# It ensures that an Nginx container runs on each node in the cluster, exposing port 80.
+# Resource requests and limits are defined for CPU and memory to ensure proper resource allocation.
+# Kubernetes DaemonSet is used to deploy a copy of a Pod on all or selected nodes in a cluster, commonly for logging or monitoring purposes.
+# The restart policy is set to "Always" by default for DaemonSet Pods, ensuring they are restarted automatically if they fail.
+# DaemonSets are useful for running background tasks that need to be present on every node.
+# ReplicaSets vs DaemonSets: ReplicaSets ensure a specified number of Pod replicas are running, while DaemonSets ensure that a copy of a Pod runs on all or selected nodes. live example of DaemonSet use cases include log collection, monitoring agents, and network plugins.

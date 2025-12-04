@@ -1,0 +1,48 @@
+kind: CronJob
+apiVersion: batch/v1
+metadata:
+  name: nginx-cronjob
+  namespace: nginx-test
+spec:
+  schedule: "* * * * *"
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          labels:
+            app: cron-batch-task
+        spec:
+          containers:
+            - name: cron-batch-container
+              image: busybox
+              command:
+                - sh
+                - -c
+                - >
+                  echo "Backup started at $(date)";
+                  mkdir -p /backups &&
+                  mkdir -p /demo-data &&
+                  cp -r /demo-data /backups &&
+                  echo "Backup completed at $(date)";
+              volumeMounts:
+                - name: backup-volume
+                  mountPath: /backups
+                - name: demo-data-volume
+                  mountPath: /demo-data
+          restartPolicy: OnFailure
+          volumes:
+            - name: backup-volume
+              hostPath:
+                path: /backups
+                type: DirectoryOrCreate
+            - name: demo-data-volume
+              hostPath:
+                path: /demo-data
+                type: DirectoryOrCreate
+
+# This CronJob definition creates a CronJob named "nginx-cronjob" in the "nginx-test" namespace.
+# The CronJob is scheduled to run every minute and executes a BusyBox container that performs a backup task.
+# The task involves creating backup and demo data directories, copying demo data to the backup directory, and logging the start and completion times.
+# The CronJob uses hostPath volumes to store backups and demo data on the host machine.
+# The restart policy is set to "OnFailure", ensuring that the job is retried if it fails.
+# Kubernetes CronJob is used to schedule periodic tasks, such as backups or data processing, on a regular interval.

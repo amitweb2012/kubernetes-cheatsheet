@@ -98,3 +98,13 @@ spec:
             claimName: mysql-pvc
 # port forwarding
 # kubectl port-forward --namespace mysql-test statefulset/mysql 3306:3306
+# This StatefulSet definition creates a MySQL database instance in the "mysql-test" namespace.
+# It uses a ConfigMap to provide database configuration such as database name, user, and passwords.
+# A headless Service is created to provide stable network identity for the StatefulSet Pods.
+# The StatefulSet manages a single replica of the MySQL Pod, ensuring it has persistent storage via a PersistentVolumeClaim.
+# Liveness and readiness probes are configured to monitor the health of the MySQL instance.
+# Kubernetes StatefulSet is used for applications that require stable network identities and persistent storage, such as databases.
+# This setup allows for easy scaling and management of the MySQL database instance within the Kubernetes cluster.
+# The PersistentVolumeClaim requests 2Gi of storage for the MySQL data.
+# Example use cases include running stateful applications like databases, message queues, and other services that require stable storage and network identities.
+

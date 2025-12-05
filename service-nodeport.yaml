@@ -1,0 +1,23 @@
+kind: Service
+apiVersion: v1
+metadata:
+  name: fleetman-service
+  namespace: nginx-test
+spec:
+  selector:
+    app: fleetman
+    release: "0"
+  ports:
+    - protocol: TCP
+      port: 80
+      nodePort: 30080
+  type: NodePort
+
+# This Service definition creates a NodePort service named "nginx-service" in the "nginx-test" namespace.
+# It selects pods with the label "app: nginx" and exposes port 80, directing traffic to the same port on the selected pods.
+# The service is exposed on node port 30080, allowing external access to the service via any node's IP address on that port.
+# Kubernetes services are used to expose applications running on a set of Pods within the cluster.
+# NodePort type service exposes the service on each Node's IP at a static port (the NodePort).
+# This allows external traffic to access the service, making it suitable for development and testing scenarios where external access is needed.
+# To run this service on extearnal browser using the URL: http://<NodeIP>:30080 
+# for in minikube use: minikube service nginx-service -n nginx-test --url

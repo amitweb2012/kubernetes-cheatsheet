@@ -44,3 +44,5 @@ spec:
 # The rewrite-target annotation is used to modify the request URL before forwarding it to the backend services.
 # Kubernetes Ingress is used to expose HTTP and HTTPS routes from outside the cluster to services within the cluster, providing load balancing, SSL termination, and name-based virtual hosting. 
 # Relive example use cases include hosting multiple web applications under different paths or subdomains using a single Ingress resource.
+# comand to port-forward:
+# kubectl port-forward -n ingress-test svc/ingress-nginx-controller 8080:80

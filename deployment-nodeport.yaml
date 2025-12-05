@@ -1,0 +1,39 @@
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: fleetman-deployment
+  namespace: nginx-test
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: fleetman
+  template:
+    metadata:
+      labels:
+        app: fleetman
+        release: "0"
+    spec:
+      containers:
+        - name: fleetman-container
+          image: richardchesterwood/k8s-fleetman-webapp-angular:release0
+          ports:
+            - containerPort: 80 
+      resources:
+        limits:
+          memory: "512Mi"
+          cpu: "1"
+        requests:
+          memory: "256Mi"
+          cpu: "500m"
+      restartPolicy: Always
+
+# Rolling update Deployment for fleetman application
+# This Deployment definition creates a Deployment named "nginx-deployment" in the "nginx-test" namespace.
+# It manages 3 replicas of Pods running the fleetman web application container, exposing port 80.
+# Resource requests and limits are defined for CPU and memory to ensure proper resource allocation.
+# The restart policy is set to "Always", ensuring that the Pods are restarted automatically if they fail.
+# Kubernetes Deployment provides declarative updates for Pods and ReplicaSets, allowing for easy scaling and management of application deployments.
+# This setup allows for rolling updates to the fleetman application, minimizing downtime during updates.
+# Command of rolling update:
+# kubectl set image deployment/fleetman-deployment fleetman-container=richardchesterwood/k8s-fleetman-webapp-angular:release0-5 -n nginx-test

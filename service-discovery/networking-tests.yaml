@@ -1,0 +1,59 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: mysql
+  labels:
+    app: mysql
+spec:
+  containers:
+   - name: mysql
+     image: mysql/mysql-server:8.0.23
+     env:
+      # Use secret in real life
+      - name: MYSQL_ROOT_PASSWORD
+        value: password
+      - name: MYSQL_DATABASE
+        value: fleetman
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: database
+spec:
+  selector:
+    app: mysql
+  ports:
+  - port: 3306
+  type: ClusterIP
+
+# Explanation:
+# This YAML file defines a Pod running a MySQL database server and a ClusterIP Service to expose the database within the Kubernetes cluster.
+# The Pod is labeled with "app: mysql" and uses the MySQL 8.0.23 image, with environment variables set for the root password and a default database named "test".
+# The Service named "database" selects the Pod using the same label and exposes port 3306, which is the default port for MySQL.
+# The ClusterIP type Service makes the database accessible only within the cluster, allowing other Pods to connect to it using the Service name "database".
+# Service Discovery:
+# The ClusterIP Service allows other Pods in the cluster to connect to the MySQL database, making it accessible for database communication within the cluster.
+# kubectl exec -it pod/webapp-c64f8b446-cnwtl -- sh
+# / # ls
+# bin    dev    etc    home   lib    media  mnt    proc   root   run    sbin   srv    sys    tmp    usr    var
+# / # cd etc/
+# /etc # cat resolv.conf 
+# nameserver 10.96.0.10
+# search default.svc.cluster.local svc.cluster.local cluster.local
+# options ndots:5
+# /etc # nslookup database
+# nslookup: can't resolve '(null)': Name does not resolve
+
+# Name:      database
+# Address 1: 10.107.108.81 database.default.svc.cluster.local
+
+# apk update
+# apk add bind-tools
+# apk add mysql-client
+# mysql -h database -u root -ppassword fleetman
+
+# This setup demonstrates Kubernetes Service Discovery, 
+# where the Pod can resolve the "database" Service to connect to the MySQL database using its internal ClusterIP address.
+
+# fully qualified domain name (FQDN) of the service is:
+# database.default.svc.cluster.local

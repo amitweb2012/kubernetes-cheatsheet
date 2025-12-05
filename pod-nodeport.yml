@@ -1,14 +1,42 @@
 kind: Pod
 apiVersion: v1
 metadata:
+  name: fleetman-pod
+  namespace: nginx-test
+  labels:
+    app: fleetman
+    release: "0"
+spec:
+  containers:
+    - name: fleetman-container
+      image: richardchesterwood/k8s-fleetman-webapp-angular:release0
+      imagePullPolicy: Always
+      ports:
+        - containerPort: 80
+      resources:
+        limits:
+          memory: "128Mi"
+          cpu: "500m"
+        requests:
+          memory: "64Mi"
+          cpu: "250m"
+  restartPolicy: Always
+
+---
+
+kind: Pod
+apiVersion: v1
+metadata:
   name: nginx-pod
   namespace: nginx-test
   labels:
-    app: nginx
+    app: fleetman
+    release: "0-5"
 spec:
   containers:
-    - name: nginx-container
-      image: nginx:latest
+    - name: fleetman-container
+      image: richardchesterwood/k8s-fleetman-webapp-angular:release0-5
+      imagePullPolicy: Always
       ports:
         - containerPort: 80
       resources:

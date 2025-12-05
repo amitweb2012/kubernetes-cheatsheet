@@ -15,3 +15,5 @@ spec:
 # This Service definition creates a ClusterIP service named "nginx-service" in the "nginx-test" namespace.
 # It selects pods with the label "app: nginx" and exposes port 80, directing traffic to the same port on the selected pods.
 # kuberneres service used to expose an application running on a set of Pods within the cluster.
+# CusterIP type service is the default type, which exposes the service on a cluster-internal IP.
+# NodePort and LoadBalancer are other types of services used to expose services externally.

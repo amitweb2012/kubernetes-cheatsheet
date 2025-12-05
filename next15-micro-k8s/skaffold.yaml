@@ -1,0 +1,30 @@
+apiVersion: skaffold/v4beta11
+kind: Config
+metadata:
+  name: next15-micro-k8s
+build:
+  local:
+    push: false
+  artifacts:
+    - image: next15-frontend
+      context: next-app
+      docker:
+        dockerfile: Dockerfile
+    - image: contact-service
+      context: contact-service
+      docker:
+        dockerfile: Dockerfile
+manifests:
+  rawYaml:
+    - k8s/namespace.yaml
+    - k8s/mongo.yaml
+    - k8s/contact-api.yaml
+    - k8s/frontend.yaml
+deploy:
+  kubectl: {}
+portForward:
+  - resourceType: service
+    resourceName: frontend-svc
+    namespace: nginx-test
+    port: 3000
+    localPort: 3000

@@ -6,11 +6,11 @@ build:
   local:
     push: false
   artifacts:
-    - image: next15-frontend
+    - image: amitweb2012/next15-frontend
       context: next-app
       docker:
         dockerfile: Dockerfile
-    - image: contact-service
+    - image: amitweb2012/contact-service
       context: contact-service
       docker:
         dockerfile: Dockerfile

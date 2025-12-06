@@ -27,7 +27,7 @@ spec:
     spec:
       containers:
         - name: contact-api
-          image: contact-service:latest
+          image: amitweb2012/contact-service:latest
           ports:
             - containerPort: 4000
           env:

@@ -29,7 +29,7 @@ spec:
     spec:
       containers:
         - name: frontend
-          image: next15-frontend:latest
+          image: amitweb2012/next15-frontend:latest
           ports:
             - containerPort: 3000
           env:

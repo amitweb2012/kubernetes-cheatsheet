@@ -174,7 +174,15 @@ CONTACT_API_URL=http://localhost:4000 npm run dev
 
 Visit `http://localhost:3000`.
 
-### 8.2 Dev on Minikube with Skaffold
+### 8.2 Run on minikube only
+
+Build two Docker file on local
+
+```
+minikube service frontend-svc -n nginx-test
+```
+
+### 8.3 Dev on Minikube with Skaffold
 
 ```bash
 minikube start --driver=docker
@@ -184,4 +192,3 @@ skaffold dev
 ```
 
 Visit `http://localhost:3000`.
-

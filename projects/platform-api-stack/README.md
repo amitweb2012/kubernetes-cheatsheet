@@ -628,3 +628,42 @@ These are follow-up engineering tasks; they are not implied to exist in the curr
 6. Add automated integration tests using disposable PostgreSQL, Redis and a test OIDC provider.
 7. Add CI checks for unit/integration tests, dependency scanning, container scanning, SBOM generation, Helm lint and rendered-manifest policy checks.
 8. Add tested backup/restore and migration recovery runbooks.
+
+
+## GitHub Actions CI/CD pipeline
+
+The repository workflow at `.github/workflows/ci-docker.yml` builds and validates this project. It is scoped to changes under `projects/platform-api-stack/**` (and changes to the workflow itself), so unrelated Kubernetes examples do not trigger this pipeline.
+
+### Pull request checks
+
+For pull requests that touch this project, GitHub Actions:
+
+1. Installs API dependencies and checks JavaScript syntax.
+2. Installs frontend dependencies and runs the Next.js production build.
+3. Runs `helm lint` against the chart.
+4. Renders the chart with `helm template`.
+5. Builds the API and web Docker images without publishing them.
+
+### Main branch publishing
+
+After changes are pushed or merged to `main`, the workflow repeats validation and publishes these Docker Hub images:
+
+- `<DOCKERHUB_USERNAME>/platform-api:latest`
+- `<DOCKERHUB_USERNAME>/platform-api:sha-<commit>`
+- `<DOCKERHUB_USERNAME>/platform-web:latest`
+- `<DOCKERHUB_USERNAME>/platform-web:sha-<commit>`
+
+Configure the following repository Actions secrets before merging to `main`:
+
+- `DOCKERHUB_USERNAME`: Docker Hub username / namespace.
+- `DOCKERHUB_TOKEN`: Docker Hub access token with permission to push images.
+
+In GitHub, open **Settings → Secrets and variables → Actions → New repository secret**. Do not put Docker Hub credentials in workflow YAML or commit them to the repository.
+
+### Run manually
+
+The workflow also supports **Actions → CI - Platform API Stack → Run workflow**.
+
+### Important scope
+
+This pipeline validates application syntax/builds, Helm rendering and Docker image builds. It does not connect to a live PostgreSQL/Redis instance, execute database migrations against production, deploy to a Kubernetes cluster, or prove that OAuth login works end to end. Those require separate integration tests and a controlled deployment workflow. The current app directories do not contain committed npm lockfiles, so dependency installation uses `npm install`; adding and committing lockfiles would allow reproducible `npm ci` installs.

@@ -88,6 +88,7 @@ From the repository root:
 
 ```bash
 docker build -t platform-api:1.0.0 ./projects/platform-api-stack/app
+docker build -t platform-web:1.0.0 ./projects/platform-api-stack/web
 ```
 
 For KinD, load the image into the cluster:
@@ -113,7 +114,16 @@ kubectl -n platform create secret generic platform-api-secrets \
   --from-literal=POSTGRES_USER='platform_user' \
   --from-literal=POSTGRES_PASSWORD='CHANGE_ME' \
   --from-literal=POSTGRES_DB='platform' \
-  --from-literal=REDIS_URL='redis://platform-api-stack-redis:6379'
+  --from-literal=REDIS_URL='redis://platform-api-stack-redis:6379' \\
+  --from-literal=OIDC_ISSUER='https://identity.example.com/realms/platform' \\
+  --from-literal=OIDC_AUDIENCE='platform-notes'
+
+kubectl -n platform create secret generic platform-web-secrets \\
+  --from-literal=OIDC_ISSUER='https://identity.example.com/realms/platform' \\
+  --from-literal=OIDC_CLIENT_ID='platform-notes' \\
+  --from-literal=OIDC_CLIENT_SECRET='REPLACE_WITH_CLIENT_SECRET' \\
+  --from-literal=NEXTAUTH_SECRET="$(openssl rand -base64 32)" \\
+  --from-literal=NEXTAUTH_URL='https://app.platform.local'
 ```
 
 Use strong unique passwords and a secret manager for shared or production clusters. Kubernetes Secret values are base64-encoded, not encrypted by base64; enable encryption at rest and restrict RBAC.
@@ -154,6 +164,27 @@ kubectl rollout status statefulset/platform-api-stack-postgres -n platform
 kubectl logs deployment/platform-api-stack-api -n platform
 ```
 
+## OAuth 2.0 / OpenID Connect login
+
+The web dashboard uses NextAuth with the Keycloak OIDC provider and the Authorization Code flow with PKCE/state checks. The browser receives a secure NextAuth session cookie; the access token stays server-side and is forwarded by the Next.js API route to Express as a Bearer token. Express validates the JWT signature against the identity provider's JWKS and checks issuer and audience before allowing note or database-operations requests.
+
+Configure a confidential Keycloak client (or compatible OIDC provider) with:
+- Client ID: `platform-notes` (or your chosen ID)
+- Client authentication: enabled
+- Standard authorization code flow: enabled
+- Valid redirect URI: `https://app.platform.local/api/auth/callback/keycloak`
+- Web origin: `https://app.platform.local`
+- PKCE: S256
+- An access-token audience mapper that includes the client ID as `platform-notes` (or set `OIDC_AUDIENCE` to the audience emitted by your provider)
+
+Set `OIDC_ISSUER` to the realm issuer URL (for Keycloak, for example `https://identity.example.com/realms/platform`). The API Secret needs `OIDC_ISSUER` and `OIDC_AUDIENCE`; the web Secret needs `OIDC_ISSUER`, `OIDC_CLIENT_ID`, `OIDC_CLIENT_SECRET`, `NEXTAUTH_SECRET`, and `NEXTAUTH_URL`. The chart injects `API_INTERNAL_URL` for server-to-server calls. Never expose the client secret or NextAuth secret to browser-side variables.
+
+The API's `/health/*` endpoints remain unauthenticated for Kubernetes probes. Notes and database-operations endpoints require a valid access token. The separate `api.platform.local` host is intended for direct API clients that send their own Bearer token; the dashboard host routes `/api/*` through Next.js so the session token is not exposed to browser JavaScript.
+
+## Dashboard database and migration panels
+
+The dashboard calls the authenticated `/api/v1/ops/database` endpoint. It returns safe operational metadata (database name, PostgreSQL version, note row count, Redis status and applied migration filenames/timestamps); it never returns connection strings, passwords or secret values. The notes schema migration `004_add_note_category.sql` adds a persisted category column, and the notes API plus seed data now read/write that category.
+
 ## Database migrations and sample data
 
 The API no longer creates tables during startup. Apply versioned SQL migrations before starting the API. The migration runner records applied files in `schema_migrations`, runs each file in a transaction, and uses a PostgreSQL advisory lock to prevent concurrent migration runs.
@@ -174,6 +205,7 @@ npm start
 - `db/migrations/001_create_notes_table.sql` creates the original notes table (safe for an existing table).
 - `002_add_note_metadata.sql` adds update timestamps and an optional unique seed key.
 - `003_import_legacy_notes.sql` creates a small legacy table and imports its sample records into the current notes table.
+- `004_add_note_category.sql` adds a persisted category to notes and backfills existing rows.
 - `db/seed.sql` inserts five repeatable demo notes. Running it again updates those demo rows instead of duplicating them.
 - `src/db/migrate.js` applies migrations in filename order and tracks them.
 - `src/db/seed.js` executes the sample-data script.

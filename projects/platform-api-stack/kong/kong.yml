@@ -1,0 +1,21 @@
+_format_version: "3.0"
+_transform: true
+
+# DB-less Kong declarative configuration example.
+# Replace the upstream host with the reachable NGINX Ingress endpoint.
+services:
+  - name: platform-api-ingress
+    url: http://ingress-nginx-controller.ingress-nginx.svc.cluster.local
+    routes:
+      - name: platform-api-route
+        paths:
+          - /platform
+        strip_path: true
+        preserve_host: true
+        protocols:
+          - http
+    plugins:
+      - name: rate-limiting
+        config:
+          minute: 60
+          policy: local

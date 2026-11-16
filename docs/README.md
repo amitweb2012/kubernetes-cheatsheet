@@ -1010,7 +1010,11 @@ Client-side dry-run catches many schema/format problems, but it does not guarant
 
 ---
 
-## 22. Suggested practice plan
+## 22. Portfolio project: Platform API Stack
+
+A complete follow-on project is available in [projects/platform-api-stack/](../projects/platform-api-stack/README.md). It demonstrates a Kong API Gateway in front of NGINX Ingress, a Node.js API Deployment and Service, Redis caching, PostgreSQL persistence, Helm packaging, health probes, non-root containers, Secret references, and NetworkPolicies. Follow that project's README for prerequisites, image build/load, Secret creation, Helm installation, curl tests, and cleanup. The project is an educational single-instance data-store stack and needs further hardening before production.
+
+## 23. Suggested practice plan
 
 | Session | Practice | Success check |
 |---|---|---|
@@ -1029,7 +1033,7 @@ Try to explain each manifest in your own words before running it. That is a stro
 
 ---
 
-## 23. Glossary
+## 24. Glossary
 
 | Term | Meaning |
 |---|---|

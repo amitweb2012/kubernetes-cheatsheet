@@ -109,8 +109,8 @@ export default function HomePage() {
           <div className="welcome"><div><h1>Welcome to Kubernetes Notes 👋</h1><p>A Next.js workspace running on Kubernetes with Express API, Redis and PostgreSQL.</p></div><span className="env-label">DEMO ENVIRONMENT</span></div>
           {error && <div className="error-banner" role="alert">{error}</div>}
           <div className="stat-grid">
-            <article className="stat-card blue"><span className="stat-icon">▤</span><div><strong>{notes.length}</strong><small>Total Notes</small></div></article>
-            <article className="stat-card green"><span className="stat-icon">✓</span><div><strong>{notes.length}</strong><small>Active Notes</small></div></article>
+            <article className="stat-card blue"><span className="stat-icon">▤</span><div><strong>{database?.noteCount ?? notes.length}</strong><small>Total Notes</small></div></article>
+            <article className="stat-card green"><span className="stat-icon">✓</span><div><strong>{database?.noteCount ?? notes.length}</strong><small>Active Notes</small></div></article>
             <article className="stat-card purple"><span className="stat-icon">★</span><div><strong>{pinned.length}</strong><small>Pinned Notes</small></div></article>
             <article className="stat-card amber"><span className="stat-icon">▦</span><div><strong>{lastUpdated}</strong><small>Last Updated</small></div></article>
           </div>
@@ -128,7 +128,7 @@ export default function HomePage() {
                 <h2>✎　Create New Note</h2>
                 <div className="form-body"><label htmlFor="note-title">Title <b>*</b></label><input id="note-title" value={title} onChange={e=>setTitle(e.target.value)} maxLength={120} placeholder="Enter note title" required/>
                   <label htmlFor="note-category">Category</label><select id="note-category" value={noteCategory} onChange={e=>setNoteCategory(e.target.value)}>{categories.map(c=><option key={c}>{c}</option>)}</select>
-                  <label htmlFor="note-content">Content <b>*</b></label><textarea id="note-content" value={content} onChange={e=>setContent(e.target.value)} maxLength={10000} rows={7} placeholder="Write your note here…"/>
+                  <label htmlFor="note-content">Content <b>*</b></label><textarea id="note-content" value={content} onChange={e=>setContent(e.target.value)} maxLength={10000} rows={7} placeholder="Write your note here…" required/>
                   <div className="form-actions"><button className="save-button" disabled={saving||!title.trim()}>{saving?"Saving…":"▣　Save Note"}</button><button type="button" className="clear-button" onClick={()=>{setTitle("");setContent("");}}>↻　Clear</button></div>
                 </div>
               </form>

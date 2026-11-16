@@ -6,29 +6,29 @@ A production-minded learning project demonstrating an API edge, Kubernetes ingre
 
 ## Architecture
 
-```mermaid
+\x60\x60\x60mermaid
 flowchart TB
-  Client["Client / curl"] --> Kong["Kong API Gateway<br/>TLS, authentication, rate limits"]
-  Kong --> Ingress["NGINX Ingress Controller<br/>host/path routing"]
-  Ingress --> ApiSvc["platform-api Service<br/>ClusterIP :3000"]
-  ApiSvc --> ApiPods["API Deployment<br/>2+ stateless Pods"]
-  ApiPods --> RedisSvc["Redis Service"]
-  RedisSvc --> Redis["Redis Pod<br/>cache"]
-  ApiPods --> DbSvc["PostgreSQL Service"]
-  DbSvc --> Pg["PostgreSQL StatefulSet"]
-  Pg --> PVC["PersistentVolumeClaim"]
-  PVC --> Disk["StorageClass / CSI volume"]
-  subgraph Cluster["Kubernetes Cluster"]
+  Browser["Browser"] --> Ingress["NGINX Ingress"]
+  Ingress -->|/| WebSvc["Next.js Service"]
+  WebSvc --> WebPods["Next.js Deployment / Pods"]
+  Ingress -->|/api/*| ApiSvc["Express API Service"]
+  WebPods -. "same-origin browser requests" .-> Ingress
+  ApiSvc --> ApiPods["Express API Deployment / Pods"]
+  ApiPods --> Redis["Redis cache"]
+  ApiPods --> Postgres["PostgreSQL StatefulSet"]
+  Postgres --> PVC["PersistentVolumeClaim"]
+  Kong["Optional Kong Gateway"] -. "edge entry point" .-> Ingress
+  subgraph Cluster["Kubernetes cluster"]
     Ingress
+    WebSvc
+    WebPods
     ApiSvc
     ApiPods
-    RedisSvc
     Redis
-    DbSvc
-    Pg
+    Postgres
     PVC
   end
-```
+\x60\x60\x60
 
 Kong is the north-south API gateway in front of the cluster ingress. NGINX Ingress routes the request to the application Service. In a smaller deployment, Kong or an ingress controller may perform both gateway and ingress responsibilities; this project keeps the layers separate to make the concepts visible.
 
@@ -65,7 +65,7 @@ platform-api-stack/
 |---|---|
 | Kong | API gateway example: edge authentication, rate limiting and routing |
 | NGINX Ingress | Cluster HTTP routing using host/path rules |
-| API Deployment | Runs stateless Express API replicas |
+| Next.js Deployment | Serves the browser UI and static assets |\n| API Deployment | Runs stateless Express API replicas |
 | ClusterIP Service | Stable in-cluster API endpoint |
 | Redis | Cache for note reads |
 | PostgreSQL StatefulSet | Persistent relational data |

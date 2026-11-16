@@ -16,6 +16,10 @@ spec:
         - namespaceSelector:
             matchLabels:
               {{ .Values.networkPolicy.ingressNamespaceLabel }}: {{ .Values.networkPolicy.ingressNamespaceValue | quote }}
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/instance: {{ .Release.Name }}
+              app.kubernetes.io/component: web
       ports:
         - protocol: TCP
           port: {{ .Values.api.port }}

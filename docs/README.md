@@ -1028,6 +1028,7 @@ A complete follow-on project is available in [projects/platform-api-stack/](../p
 | 8 | Run a Job and CronJob | Job completes and schedule creates Jobs |
 | 9 | Inspect a DaemonSet and StatefulSet | Expected Pods and storage appear |
 | 10 | Run the Next.js microservices demo | Frontend reaches API and database |
+| 11 | Add the Next.js Notes UI to Platform API Stack | Ingress routes the UI and `/api` to separate Services |
 
 Try to explain each manifest in your own words before running it. That is a strong way to check your understanding.
 

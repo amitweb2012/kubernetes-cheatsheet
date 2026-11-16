@@ -10,26 +10,22 @@ const pool = new Pool({
 
 async function main() {
   if (!process.env.DATABASE_URL) throw new Error("DATABASE_URL is required");
-
-  await pool.query(`
-    CREATE TABLE IF NOT EXISTS schema_migrations (
-      version VARCHAR(255) PRIMARY KEY,
-      applied_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-    )
-  `);
-
-  // Prevent two application instances from applying migrations simultaneously.
-  const lock = await pool.query("SELECT pg_try_advisory_lock(742019)");
-  if (!lock.rows[0].pg_try_advisory_lock) {
-    throw new Error("Another migration process is running");
-  }
+  const client = await pool.connect();
 
   try {
+    await client.query("SELECT pg_advisory_lock(742019)");
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS schema_migrations (
+        version VARCHAR(255) PRIMARY KEY,
+        applied_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )
+    `);
+
     const directory = path.join(__dirname, "../../db/migrations");
     const files = fs.readdirSync(directory).filter((name) => name.endsWith(".sql")).sort();
 
     for (const file of files) {
-      const alreadyApplied = await pool.query(
+      const alreadyApplied = await client.query(
         "SELECT 1 FROM schema_migrations WHERE version = $1",
         [file]
       );
@@ -39,7 +35,6 @@ async function main() {
       }
 
       const sql = fs.readFileSync(path.join(directory, file), "utf8");
-      const client = await pool.connect();
       try {
         await client.query("BEGIN");
         await client.query(sql);
@@ -49,12 +44,11 @@ async function main() {
       } catch (error) {
         await client.query("ROLLBACK");
         throw error;
-      } finally {
-        client.release();
       }
     }
   } finally {
-    await pool.query("SELECT pg_advisory_unlock(742019)");
+    try { await client.query("SELECT pg_advisory_unlock(742019)"); } catch {}
+    client.release();
   }
 }
 

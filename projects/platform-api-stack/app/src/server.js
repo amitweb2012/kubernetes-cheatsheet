@@ -92,7 +92,7 @@ app.get("/api/v1/notes", requireAuth, async (_req, res, next) => {
       if (cached) return res.json({ source: "redis-cache", data: JSON.parse(cached) });
     }
     const { rows } = await pool.query(
-      "SELECT id, title, content, created_at FROM notes ORDER BY id DESC LIMIT 100"
+      "SELECT id, title, content, category, created_at FROM notes ORDER BY id DESC LIMIT 100"
     );
     if (redisReady) await redis.set("notes:list", JSON.stringify(rows), { EX: 30 });
     res.json({ source: "postgresql", data: rows });
@@ -103,12 +103,14 @@ app.post("/api/v1/notes", requireAuth, async (req, res, next) => {
   try {
     const title = typeof req.body.title === "string" ? req.body.title.trim() : "";
     const content = typeof req.body.content === "string" ? req.body.content : "";
+    const allowedCategories = ["Kubernetes", "Helm", "Ingress", "Observability", "Security", "Database", "General"];
+    const category = allowedCategories.includes(req.body.category) ? req.body.category : "General";
     if (!title || title.length > 120 || content.length > 10000) {
       return res.status(400).json({ error: "title is required (max 120 chars); content max is 10000 chars" });
     }
     const { rows } = await pool.query(
-      "INSERT INTO notes (title, content) VALUES ($1, $2) RETURNING id, title, content, created_at",
-      [title, content]
+      "INSERT INTO notes (title, content, category) VALUES ($1, $2, $3) RETURNING id, title, content, category, created_at",
+      [title, content, category]
     );
     if (redisReady) await redis.del("notes:list");
     res.status(201).json({ data: rows[0] });

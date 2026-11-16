@@ -6,6 +6,7 @@ import { signIn, signOut, useSession } from "next-auth/react";
 const categories = ["Kubernetes", "Helm", "Ingress", "Observability", "Security", "Database", "General"];
 const iconFor = (category) => ({ Kubernetes:"⬡", Helm:"☸", Ingress:"⌘", Observability:"◉", Security:"◇", Database:"▤", General:"✦" }[category] || "✦");
 function categoryFor(note) {
+  if (categories.includes(note.category)) return note.category;
   const text = `${note.title} ${note.content}`.toLowerCase();
   if (/helm|chart/.test(text)) return "Helm";
   if (/ingress|routing|gateway/.test(text)) return "Ingress";
@@ -58,7 +59,7 @@ export default function HomePage() {
     if (!title.trim()) return;
     setSaving(true); setError("");
     try {
-      const response = await fetch("/api/v1/notes", { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({ title:title.trim(), content:content.trim() }) });
+      const response = await fetch("/api/v1/notes", { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({ title:title.trim(), content:content.trim(), category:noteCategory }) });
       const result = await response.json();
       if (!response.ok) throw new Error(result.error || "Could not save note.");
       setTitle(""); setContent("");

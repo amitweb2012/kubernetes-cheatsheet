@@ -5,12 +5,13 @@ _transform: true
 # Replace the upstream host with the reachable NGINX Ingress endpoint.
 services:
   - name: platform-api-ingress
-    url: http://nginx-ingress-controller.ingress-nginx.svc.cluster.local
+    url: http://ingress-nginx-controller.ingress-nginx.svc.cluster.local
     routes:
       - name: platform-api-route
         paths:
           - /platform
         strip_path: true
+        preserve_host: true
         protocols:
           - http
     plugins:

@@ -33,13 +33,14 @@ spec:
     - host: {{ .Values.web.ingress.host | quote }}
       http:
         paths:
+          # Next.js handles OAuth callbacks and proxies authenticated API requests.
           - path: /api
             pathType: Prefix
             backend:
               service:
-                name: {{ include "platform-api-stack.fullname" . }}-api
+                name: {{ include "platform-api-stack.fullname" . }}-web
                 port:
-                  number: {{ .Values.api.port }}
+                  number: {{ .Values.web.port }}
           - path: /
             pathType: Prefix
             backend:

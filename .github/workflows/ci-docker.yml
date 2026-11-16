@@ -1,16 +1,34 @@
-name: CI - Build & Push Docker Images
+name: CI - Platform API Stack
 
 on:
   push:
     branches:
       - main
+    paths:
+      - "projects/platform-api-stack/**"
+      - ".github/workflows/ci-docker.yml"
   pull_request:
+    paths:
+      - "projects/platform-api-stack/**"
+      - ".github/workflows/ci-docker.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: platform-api-stack-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  APP_DIR: projects/platform-api-stack/app
+  WEB_DIR: projects/platform-api-stack/web
+  CHART_DIR: projects/platform-api-stack/helm/platform-api-stack
 
 jobs:
-  build-and-test:
-    name: Build & Test
+  validate:
+    name: Validate application and Helm chart
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -19,29 +37,48 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
+          cache: npm
+          cache-dependency-path: |
+            projects/platform-api-stack/app/package.json
+            projects/platform-api-stack/web/package.json
 
-      # ---- Next.js app ----
-      - name: Install deps (Next.js)
-        working-directory: next15-micro-k8s/next-app
-        run: npm install
+      - name: Install API dependencies
+        working-directory: ${{ env.APP_DIR }}
+        run: npm install --no-audit --no-fund
 
-      - name: Build (Next.js)
-        working-directory: next15-micro-k8s/next-app
+      - name: Check API JavaScript syntax
+        working-directory: ${{ env.APP_DIR }}
+        run: |
+          find src -type f -name "*.js" -print0 | xargs -0 -r -n1 node --check
+
+      - name: Install frontend dependencies
+        working-directory: ${{ env.WEB_DIR }}
+        run: npm install --no-audit --no-fund
+
+      - name: Build Next.js frontend
+        working-directory: ${{ env.WEB_DIR }}
         run: npm run build
 
-      # ---- Contact microservice ----
-      - name: Install deps (contact-service)
-        working-directory: next15-micro-k8s/contact-service
-        run: npm install
+      - name: Set up Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: v3.16.4
 
-  docker-build-and-push:
-    name: Build & Push Docker Images
+      - name: Lint Helm chart
+        run: helm lint "${{ env.CHART_DIR }}"
+
+      - name: Render Helm manifests
+        run: |
+          helm template platform-api-stack "${{ env.CHART_DIR }}" \
+            --namespace platform \
+            --values "${{ env.CHART_DIR }}/values.yaml" \
+            > /tmp/platform-api-stack-rendered.yaml
+          test -s /tmp/platform-api-stack-rendered.yaml
+
+  docker:
+    name: Build API and web Docker images
     runs-on: ubuntu-latest
-    needs: build-and-test
-    env:
-      FRONTEND_IMAGE: docker.io/${{ secrets.DOCKERHUB_USERNAME }}/next15-frontend
-      API_IMAGE: docker.io/${{ secrets.DOCKERHUB_USERNAME }}/contact-service
-
+    needs: validate
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -49,26 +86,49 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Log in to Docker Hub
+      - name: Log in to Docker Hub (main branch only)
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Build and push frontend image
-        uses: docker/build-push-action@v6
+      - name: Extract API image metadata
+        id: api-meta
+        uses: docker/metadata-action@v5
         with:
-          context: ./next15-micro-k8s/next-app
-          file: ./next15-micro-k8s/next-app/Dockerfile
-          push: true
+          images: docker.io/${{ secrets.DOCKERHUB_USERNAME }}/platform-api
           tags: |
-            ${{ env.FRONTEND_IMAGE }}:latest
+            type=raw,value=latest,enable=${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+            type=sha,prefix=sha-
 
-      - name: Build and push API image
+      - name: Build (and publish on main) API image
         uses: docker/build-push-action@v6
         with:
-          context: ./next15-micro-k8s/contact-service
-          file: ./next15-micro-k8s/contact-service/Dockerfile
-          push: true
+          context: ./projects/platform-api-stack/app
+          file: ./projects/platform-api-stack/app/Dockerfile
+          push: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+          tags: ${{ steps.api-meta.outputs.tags }}
+          labels: ${{ steps.api-meta.outputs.labels }}
+          cache-from: type=gha,scope=platform-api
+          cache-to: type=gha,mode=max,scope=platform-api
+
+      - name: Extract web image metadata
+        id: web-meta
+        uses: docker/metadata-action@v5
+        with:
+          images: docker.io/${{ secrets.DOCKERHUB_USERNAME }}/platform-web
           tags: |
-            ${{ env.API_IMAGE }}:latest
+            type=raw,value=latest,enable=${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+            type=sha,prefix=sha-
+
+      - name: Build (and publish on main) web image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./projects/platform-api-stack/web
+          file: ./projects/platform-api-stack/web/Dockerfile
+          push: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+          tags: ${{ steps.web-meta.outputs.tags }}
+          labels: ${{ steps.web-meta.outputs.labels }}
+          cache-from: type=gha,scope=platform-web
+          cache-to: type=gha,mode=max,scope=platform-web

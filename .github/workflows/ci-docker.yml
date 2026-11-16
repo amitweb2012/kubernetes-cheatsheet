@@ -29,6 +29,32 @@ jobs:
   validate:
     name: Validate application and Helm chart
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: platform_test
+          POSTGRES_USER: platform_test
+          POSTGRES_PASSWORD: platform_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U platform_test -d platform_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+      redis:
+        image: redis:7.4-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgres://platform_test:platform_test@localhost:5432/platform_test
+      REDIS_URL: redis://localhost:6379
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -45,6 +71,10 @@ jobs:
       - name: Install API dependencies
         working-directory: ${{ env.APP_DIR }}
         run: npm install --no-audit --no-fund
+
+      - name: Run PostgreSQL and Redis integration tests
+        working-directory: ${{ env.APP_DIR }}
+        run: npm run test:integration
 
       - name: Check API JavaScript syntax
         working-directory: ${{ env.APP_DIR }}

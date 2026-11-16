@@ -154,6 +154,45 @@ kubectl rollout status statefulset/platform-api-stack-postgres -n platform
 kubectl logs deployment/platform-api-stack-api -n platform
 ```
 
+## Database migrations and sample data
+
+The API no longer creates tables during startup. Apply versioned SQL migrations before starting the API. The migration runner records applied files in `schema_migrations`, runs each file in a transaction, and uses a PostgreSQL advisory lock to prevent concurrent migration runs.
+
+### Run locally
+
+Start PostgreSQL and set the connection string in your shell:
+
+```bash
+cd projects/platform-api-stack/app
+export DATABASE_URL='postgres://platform_user:CHANGE_ME@localhost:5432/platform'
+npm install
+npm run db:migrate
+npm run db:seed
+npm start
+```
+
+- `db/migrations/001_create_notes_table.sql` creates the original notes table (safe for an existing table).
+- `002_add_note_metadata.sql` adds update timestamps and an optional unique seed key.
+- `003_import_legacy_notes.sql` creates a small legacy table and imports its sample records into the current notes table.
+- `db/seed.sql` inserts five repeatable demo notes. Running it again updates those demo rows instead of duplicating them.
+- `src/db/migrate.js` applies migrations in filename order and tracks them.
+- `src/db/seed.js` executes the sample-data script.
+
+### Run against the Kubernetes database
+
+After creating the namespace and PostgreSQL Secret, start a temporary client Pod with the API image (which includes the migration scripts):
+
+```bash
+kubectl run platform-db-migrate -n platform --rm -it --restart=Never \\
+  --image=platform-api:1.0.0 \\
+  --env="DATABASE_URL=postgres://platform_user:CHANGE_ME@platform-api-stack-postgres:5432/platform" \\
+  --command -- node src/db/migrate.js
+```
+
+Run the same command with `node src/db/seed.js` to load demo notes. For a shared cluster, use a Pod spec that references the existing Kubernetes Secret rather than putting the password on the command line.
+
+For an existing database created by the earlier sample API, migration 001 leaves the `notes` table intact; the later migrations add metadata and import the example legacy rows. Back up real data before applying schema changes. These scripts are educational examples: review them and test migrations/rollback procedures against a disposable database first.
+
 ## 5. Test the API
 
 Port-forward the API Service:

@@ -6,7 +6,8 @@ export const authOptions = {
     KeycloakProvider({
       clientId: process.env.OIDC_CLIENT_ID,
       clientSecret: process.env.OIDC_CLIENT_SECRET,
-      issuer: process.env.OIDC_ISSUER
+      issuer: process.env.OIDC_ISSUER,
+      checks: ["pkce", "state"]
     })
   ],
   session: { strategy: "jwt" },

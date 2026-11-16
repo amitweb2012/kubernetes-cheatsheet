@@ -170,7 +170,7 @@ kubectl logs deployment/platform-api-stack-api -n platform
 
 The web dashboard uses NextAuth with the Keycloak OIDC provider and the Authorization Code flow with PKCE/state checks. The browser receives a secure NextAuth session cookie; the access token stays server-side and is forwarded by the Next.js API route to Express as a Bearer token. Express validates the JWT signature against the identity provider's JWKS and checks issuer and audience before allowing note or database-operations requests.
 
-Configure a confidential Keycloak client (or compatible OIDC provider) with:
+Configure a confidential Keycloak client with:
 - Client ID: `platform-notes` (or your chosen ID)
 - Client authentication: enabled
 - Standard authorization code flow: enabled

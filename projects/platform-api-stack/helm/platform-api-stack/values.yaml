@@ -12,9 +12,26 @@ api:
     enabled: true
     className: nginx
     host: api.platform.local
-    path: /
-    pathType: Prefix
   existingSecret: platform-api-secrets
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 256Mi
+
+web:
+  replicaCount: 2
+  image:
+    repository: platform-web
+    tag: "1.0.0"
+    pullPolicy: IfNotPresent
+  port: 3000
+  ingress:
+    enabled: true
+    className: nginx
+    host: app.platform.local
   resources:
     requests:
       cpu: 100m

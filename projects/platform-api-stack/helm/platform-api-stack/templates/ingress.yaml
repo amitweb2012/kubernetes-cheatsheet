@@ -11,11 +11,40 @@ spec:
     - host: {{ .Values.api.ingress.host | quote }}
       http:
         paths:
-          - path: {{ .Values.api.ingress.path }}
-            pathType: {{ .Values.api.ingress.pathType }}
+          - path: /
+            pathType: Prefix
             backend:
               service:
                 name: {{ include "platform-api-stack.fullname" . }}-api
                 port:
                   number: {{ .Values.api.port }}
+{{- end }}
+{{- if .Values.web.ingress.enabled }}
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "platform-api-stack.fullname" . }}-web
+  labels:
+    {{- include "platform-api-stack.labels" . | nindent 4 }}
+spec:
+  ingressClassName: {{ .Values.web.ingress.className }}
+  rules:
+    - host: {{ .Values.web.ingress.host | quote }}
+      http:
+        paths:
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "platform-api-stack.fullname" . }}-api
+                port:
+                  number: {{ .Values.api.port }}
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "platform-api-stack.fullname" . }}-web
+                port:
+                  number: {{ .Values.web.port }}
 {{- end }}

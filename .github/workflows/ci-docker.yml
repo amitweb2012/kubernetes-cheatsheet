@@ -63,10 +63,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: npm
-          cache-dependency-path: |
-            projects/platform-api-stack/app/package.json
-            projects/platform-api-stack/web/package.json
 
       - name: Install API dependencies
         working-directory: ${{ env.APP_DIR }}

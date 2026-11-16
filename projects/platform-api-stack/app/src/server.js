@@ -105,8 +105,8 @@ app.post("/api/v1/notes", requireAuth, async (req, res, next) => {
     const content = typeof req.body.content === "string" ? req.body.content : "";
     const allowedCategories = ["Kubernetes", "Helm", "Ingress", "Observability", "Security", "Database", "General"];
     const category = allowedCategories.includes(req.body.category) ? req.body.category : "General";
-    if (!title || title.length > 120 || content.length > 10000) {
-      return res.status(400).json({ error: "title is required (max 120 chars); content max is 10000 chars" });
+    if (!title || title.length > 120 || !content.trim() || content.length > 10000) {
+      return res.status(400).json({ error: "title and content are required; title max is 120 chars and content max is 10000 chars" });
     }
     const { rows } = await pool.query(
       "INSERT INTO notes (title, content, category) VALUES ($1, $2, $3) RETURNING id, title, content, category, created_at",

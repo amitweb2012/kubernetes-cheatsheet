@@ -219,7 +219,7 @@ npm start
 After creating the namespace and PostgreSQL Secret, start a temporary client Pod with the API image (which includes the migration scripts):
 
 ```bash
-kubectl run platform-db-migrate -n platform --rm -it --restart=Never \\
+kubectl run platform-db-migrate -n platform --rm -it --restart=Never \
   --image=platform-api:1.0.0 \\
   --env="DATABASE_URL=postgres://platform_user:CHANGE_ME@platform-api-stack-postgres:5432/platform" \\
   --command -- node src/db/migrate.js

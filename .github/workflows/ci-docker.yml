@@ -97,7 +97,7 @@ jobs:
         id: api-meta
         uses: docker/metadata-action@v5
         with:
-          images: docker.io/${{ secrets.DOCKERHUB_USERNAME }}/platform-api
+          images: docker.io/${{ secrets.DOCKERHUB_USERNAME || 'local' }}/platform-api
           tags: |
             type=raw,value=latest,enable=${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
             type=sha,prefix=sha-
@@ -117,7 +117,7 @@ jobs:
         id: web-meta
         uses: docker/metadata-action@v5
         with:
-          images: docker.io/${{ secrets.DOCKERHUB_USERNAME }}/platform-web
+          images: docker.io/${{ secrets.DOCKERHUB_USERNAME || 'local' }}/platform-web
           tags: |
             type=raw,value=latest,enable=${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
             type=sha,prefix=sha-

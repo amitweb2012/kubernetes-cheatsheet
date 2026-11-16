@@ -95,12 +95,14 @@ For KinD, load the image into the cluster:
 
 ```bash
 kind load docker-image platform-api:1.0.0 --name learning-cluster
+kind load docker-image platform-web:1.0.0 --name learning-cluster
 ```
 
 For Minikube, build directly into its Docker environment or load the image:
 
 ```bash
 minikube image load platform-api:1.0.0
+minikube image load platform-web:1.0.0
 ```
 
 ## 2. Create credentials outside Git
@@ -242,7 +244,7 @@ curl http://localhost:3000/api/v1/notes
 curl -X POST http://localhost:3000/api/v1/notes \
   -H 'content-type: application/json' \
   -d '{"title":"Learn Kubernetes","content":"Deploy API, Redis and PostgreSQL"}'
-curl http://localhost:3000/api/v1/notes
+curl -H "Authorization: Bearer $ACCESS_TOKEN" http://localhost:3000/api/v1/notes
 ```
 
 The notes endpoint writes to PostgreSQL and caches the list in Redis. Creating a note invalidates the list cache.

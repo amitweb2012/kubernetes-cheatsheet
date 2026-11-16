@@ -35,17 +35,16 @@ export default function HomePage() {
   const loadDashboard = useCallback(async () => {
     setError("");
     try {
-      const [notesResponse, dbResponse, healthResponse] = await Promise.all([
+      const [notesResponse, dbResponse] = await Promise.all([
         fetch("/api/v1/notes", { cache:"no-store" }),
-        fetch("/api/v1/ops/database", { cache:"no-store" }),
-        fetch("/health/ready", { cache:"no-store" })
+        fetch("/api/v1/ops/database", { cache:"no-store" })
       ]);
       if (notesResponse.status === 401 || dbResponse.status === 401) return;
       if (!notesResponse.ok) throw new Error("Could not load notes. Check API connectivity.");
       const noteData = await notesResponse.json();
       setNotes(noteData.data || []);
       if (dbResponse.ok) setDatabase(await dbResponse.json());
-      setHealth(healthResponse.ok ? "online" : "degraded");
+      setHealth(dbResponse.ok ? "online" : "degraded");
     } catch (e) {
       setError(e.message || "Dashboard request failed.");
       setHealth("offline");

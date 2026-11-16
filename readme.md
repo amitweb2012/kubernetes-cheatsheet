@@ -192,6 +192,8 @@ The main README is an overview. The separate documentation file explains Kuberne
 
 ## 🧪 Practical projects and examples
 
+| Platform API Stack | [projects/platform-api-stack/](projects/platform-api-stack/) | API Gateway (Kong), NGINX Ingress, Node.js API, Redis, PostgreSQL, Helm and security policies |
+
 | Area | Directory / file | Practice goal |
 |---|---|---|
 | Ingress routing | [ingress/](ingress/) | Route `tws.local` paths to Apache and NGINX Services |

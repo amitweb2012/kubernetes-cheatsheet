@@ -34,6 +34,11 @@ spec:
           env:
             - name: NODE_ENV
               value: production
+            - name: API_INTERNAL_URL
+              value: "http://{{ include "platform-api-stack.fullname" . }}-api:{{ .Values.api.port }}"
+          envFrom:
+            - secretRef:
+                name: {{ .Values.web.existingSecret }}
           securityContext:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true

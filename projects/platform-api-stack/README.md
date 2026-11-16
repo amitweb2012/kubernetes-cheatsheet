@@ -179,7 +179,9 @@ Configure a confidential Keycloak client (or compatible OIDC provider) with:
 - PKCE: S256
 - An access-token audience mapper that includes the client ID as `platform-notes` (or set `OIDC_AUDIENCE` to the audience emitted by your provider)
 
-Set `OIDC_ISSUER` to the realm issuer URL (for Keycloak, for example `https://identity.example.com/realms/platform`). The API Secret needs `OIDC_ISSUER` and `OIDC_AUDIENCE`; the web Secret needs `OIDC_ISSUER`, `OIDC_CLIENT_ID`, `OIDC_CLIENT_SECRET`, `NEXTAUTH_SECRET`, and `NEXTAUTH_URL`. The chart injects `API_INTERNAL_URL` for server-to-server calls. Never expose the client secret or NextAuth secret to browser-side variables.
+Set `OIDC_ISSUER` to the realm issuer URL (for Keycloak, for example `https://identity.example.com/realms/platform`). The API Secret needs `OIDC_ISSUER` and `OIDC_AUDIENCE`; the web Secret needs `OIDC_ISSUER`, `OIDC_CLIENT_ID`, `OIDC_CLIENT_SECRET`, `NEXTAUTH_SECRET`, and `NEXTAUTH_URL`. The chart injects `API_INTERNAL_URL` for server-to-server calls. The web server refreshes expired access tokens using the provider's refresh token. Never expose the client secret or NextAuth secret to browser-side variables.
+
+When NetworkPolicies are enabled, set `api.oidcEgressCIDRs` and `web.oidcEgressCIDRs` in Helm values to the trusted identity provider's HTTPS IP ranges (port 443); leave them empty only when the provider is reachable through an allowed in-cluster route. NetworkPolicy cannot select a remote service by DNS name, so keep these CIDRs narrow and maintain them if the provider's addresses change.
 
 The API's `/health/*` endpoints remain unauthenticated for Kubernetes probes. Notes and database-operations endpoints require a valid access token. The separate `api.platform.local` host is intended for direct API clients that send their own Bearer token; the dashboard host routes `/api/*` through Next.js so the session token is not exposed to browser JavaScript.
 

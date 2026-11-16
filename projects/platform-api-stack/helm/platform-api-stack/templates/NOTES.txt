@@ -1,0 +1,15 @@
+Platform API Stack deployed.
+
+Check resources:
+  kubectl get pods,svc,pvc -n {{ .Release.Namespace }}
+
+Port-forward the API:
+  kubectl port-forward -n {{ .Release.Namespace }} svc/{{ include "platform-api-stack.fullname" . }}-api 3000:{{ .Values.api.port }}
+
+Health:
+  curl http://localhost:3000/health/ready
+
+Ingress host:
+  {{ .Values.api.ingress.host }}
+
+Ensure the NGINX Ingress Controller exists and the Secret {{ .Values.api.existingSecret }} was created before installation.

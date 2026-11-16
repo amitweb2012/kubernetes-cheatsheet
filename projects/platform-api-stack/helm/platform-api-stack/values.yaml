@@ -13,6 +13,7 @@ api:
     className: nginx
     host: api.platform.local
   existingSecret: platform-api-secrets
+  oidcEgressCIDRs: [] # Set trusted identity-provider IP ranges when NetworkPolicy is enabled.
   resources:
     requests:
       cpu: 100m
@@ -32,6 +33,8 @@ web:
     enabled: true
     className: nginx
     host: app.platform.local
+  existingSecret: platform-web-secrets
+  oidcEgressCIDRs: [] # Set trusted identity-provider IP ranges when NetworkPolicy is enabled.
   resources:
     requests:
       cpu: 100m

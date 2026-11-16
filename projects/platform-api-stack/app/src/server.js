@@ -1,6 +1,7 @@
 const express = require("express");
 const { Pool } = require("pg");
 const { createClient } = require("redis");
+const { createRemoteJWKSet, jwtVerify } = require("jose");
 
 const app = express();
 app.use(express.json({ limit: "32kb" }));
@@ -12,31 +13,39 @@ const pool = new Pool({
   connectionTimeoutMillis: 3000,
   idleTimeoutMillis: 30000
 });
-
 const redis = createClient({
   url: process.env.REDIS_URL || "redis://localhost:6379",
   socket: { connectTimeout: 3000, reconnectStrategy: (retries) => Math.min(retries * 250, 3000) }
 });
 redis.on("error", (error) => console.error("Redis client error:", error.message));
-
 let redisReady = false;
 redis.connect().then(() => { redisReady = true; }).catch((error) => {
   console.error("Redis initial connection failed:", error.message);
 });
 
-async function ensureSchema() {
-  await pool.query(`
-    CREATE TABLE IF NOT EXISTS notes (
-      id BIGSERIAL PRIMARY KEY,
-      title VARCHAR(120) NOT NULL,
-      content TEXT NOT NULL DEFAULT '',
-      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-    )
-  `);
+const oidcIssuer = process.env.OIDC_ISSUER;
+const oidcAudience = process.env.OIDC_AUDIENCE || process.env.OIDC_CLIENT_ID;
+let jwks;
+if (oidcIssuer) {
+  jwks = createRemoteJWKSet(new URL(`${oidcIssuer.replace(/\/$/, "")}/protocol/openid-connect/certs`));
+}
+
+async function requireAuth(req, res, next) {
+  const header = req.headers.authorization || "";
+  const bearer = header.match(/^Bearer\s+(.+)$/i);
+  if (!bearer || !jwks || !oidcIssuer || !oidcAudience) {
+    return res.status(401).json({ error: "A valid OAuth 2.0 access token is required" });
+  }
+  try {
+    const { payload } = await jwtVerify(bearer[1], jwks, { issuer: oidcIssuer, audience: oidcAudience });
+    req.user = { sub: payload.sub, email: payload.email, name: payload.name };
+    next();
+  } catch {
+    res.status(401).json({ error: "Access token is invalid or expired" });
+  }
 }
 
 app.get("/health/live", (_req, res) => res.status(200).json({ status: "alive" }));
-
 app.get("/health/ready", async (_req, res) => {
   try {
     await pool.query("SELECT 1");
@@ -45,7 +54,6 @@ app.get("/health/ready", async (_req, res) => {
     res.status(503).json({ status: "not-ready", database: "down" });
   }
 });
-
 app.get("/api/v1/health", async (_req, res) => {
   try {
     await pool.query("SELECT 1");
@@ -55,30 +63,54 @@ app.get("/api/v1/health", async (_req, res) => {
   }
 });
 
-app.get("/api/v1/notes", async (_req, res, next) => {
+app.get("/api/v1/ops/database", requireAuth, async (_req, res, next) => {
+  try {
+    const db = await pool.query("SELECT current_database() AS database, current_setting('server_version') AS version");
+    const count = await pool.query("SELECT COUNT(*)::int AS count FROM notes");
+    const migrationTable = await pool.query("SELECT to_regclass('public.schema_migrations') AS table_name");
+    let migrations = [];
+    if (migrationTable.rows[0].table_name) {
+      const result = await pool.query("SELECT version, applied_at FROM schema_migrations ORDER BY version");
+      migrations = result.rows;
+    }
+    res.json({
+      connected: true,
+      engine: "PostgreSQL",
+      database: db.rows[0].database,
+      serverVersion: db.rows[0].version,
+      noteCount: count.rows[0].count,
+      redis: redisReady ? "Connected" : "Degraded",
+      migrations
+    });
+  } catch (error) { next(error); }
+});
+
+app.get("/api/v1/notes", requireAuth, async (_req, res, next) => {
   try {
     if (redisReady) {
       const cached = await redis.get("notes:list");
       if (cached) return res.json({ source: "redis-cache", data: JSON.parse(cached) });
     }
     const { rows } = await pool.query(
-      "SELECT id, title, content, created_at FROM notes ORDER BY id DESC LIMIT 100"
+      "SELECT id, title, content, category, created_at FROM notes ORDER BY id DESC LIMIT 100"
     );
     if (redisReady) await redis.set("notes:list", JSON.stringify(rows), { EX: 30 });
     res.json({ source: "postgresql", data: rows });
   } catch (error) { next(error); }
 });
 
-app.post("/api/v1/notes", async (req, res, next) => {
+app.post("/api/v1/notes", requireAuth, async (req, res, next) => {
   try {
     const title = typeof req.body.title === "string" ? req.body.title.trim() : "";
     const content = typeof req.body.content === "string" ? req.body.content : "";
-    if (!title || title.length > 120 || content.length > 10000) {
-      return res.status(400).json({ error: "title is required (max 120 chars); content max is 10000 chars" });
+    const allowedCategories = ["Kubernetes", "Helm", "Ingress", "Observability", "Security", "Database", "General"];
+    const category = allowedCategories.includes(req.body.category) ? req.body.category : "General";
+    if (!title || title.length > 120 || !content.trim() || content.length > 10000) {
+      return res.status(400).json({ error: "title and content are required; title max is 120 chars and content max is 10000 chars" });
     }
     const { rows } = await pool.query(
-      "INSERT INTO notes (title, content) VALUES ($1, $2) RETURNING id, title, content, created_at",
-      [title, content]
+      "INSERT INTO notes (title, content, category) VALUES ($1, $2, $3) RETURNING id, title, content, category, created_at",
+      [title, content, category]
     );
     if (redisReady) await redis.del("notes:list");
     res.status(201).json({ data: rows[0] });
@@ -99,16 +131,6 @@ async function shutdown() {
   });
   setTimeout(() => process.exit(1), 10000).unref();
 }
-
-let server;
-ensureSchema()
-  .then(() => {
-    server = app.listen(port, "0.0.0.0", () => console.log(`platform-api listening on ${port}`));
-  })
-  .catch((error) => {
-    console.error("Database initialization failed:", error.message);
-    process.exit(1);
-  });
-
+let server = app.listen(port, "0.0.0.0", () => console.log(`platform-api listening on ${port}`));
 process.on("SIGTERM", shutdown);
 process.on("SIGINT", shutdown);

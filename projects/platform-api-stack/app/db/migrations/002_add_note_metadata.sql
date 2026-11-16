@@ -1,0 +1,7 @@
+ALTER TABLE notes
+  ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  ADD COLUMN IF NOT EXISTS seed_key VARCHAR(120);
+
+CREATE UNIQUE INDEX IF NOT EXISTS notes_seed_key_unique
+  ON notes (seed_key)
+  WHERE seed_key IS NOT NULL;

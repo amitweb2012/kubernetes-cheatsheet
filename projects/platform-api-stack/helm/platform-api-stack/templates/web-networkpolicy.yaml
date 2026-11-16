@@ -37,4 +37,12 @@ spec:
       ports:
         - protocol: TCP
           port: {{ .Values.api.port }}
+{{- range .Values.web.oidcEgressCIDRs }}
+    - to:
+        - ipBlock:
+            cidr: {{ . | quote }}
+      ports:
+        - protocol: TCP
+          port: 443
+{{- end }}
 {{- end }}

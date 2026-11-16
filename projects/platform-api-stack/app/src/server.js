@@ -24,17 +24,6 @@ redis.connect().then(() => { redisReady = true; }).catch((error) => {
   console.error("Redis initial connection failed:", error.message);
 });
 
-async function ensureSchema() {
-  await pool.query(`
-    CREATE TABLE IF NOT EXISTS notes (
-      id BIGSERIAL PRIMARY KEY,
-      title VARCHAR(120) NOT NULL,
-      content TEXT NOT NULL DEFAULT '',
-      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-    )
-  `);
-}
-
 app.get("/health/live", (_req, res) => res.status(200).json({ status: "alive" }));
 
 app.get("/health/ready", async (_req, res) => {
@@ -100,15 +89,7 @@ async function shutdown() {
   setTimeout(() => process.exit(1), 10000).unref();
 }
 
-let server;
-ensureSchema()
-  .then(() => {
-    server = app.listen(port, "0.0.0.0", () => console.log(`platform-api listening on ${port}`));
-  })
-  .catch((error) => {
-    console.error("Database initialization failed:", error.message);
-    process.exit(1);
-  });
+let server = app.listen(port, "0.0.0.0", () => console.log(`platform-api listening on ${port}`));
 
 process.on("SIGTERM", shutdown);
 process.on("SIGINT", shutdown);

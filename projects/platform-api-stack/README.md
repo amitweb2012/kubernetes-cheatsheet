@@ -667,3 +667,81 @@ The workflow also supports **Actions → CI - Platform API Stack → Run workflo
 ### Important scope
 
 This pipeline validates application syntax/builds, Helm rendering and Docker image builds. It does not connect to a live PostgreSQL/Redis instance, execute database migrations against production, deploy to a Kubernetes cluster, or prove that OAuth login works end to end. Those require separate integration tests and a controlled deployment workflow. The current app directories do not contain committed npm lockfiles, so dependency installation uses `npm install`; adding and committing lockfiles would allow reproducible `npm ci` installs.
+
+
+## Integration tests: PostgreSQL and Redis
+
+The API integration test suite is in `app/test/integration.test.js` and runs with Node's built-in test runner. It uses real PostgreSQL and Redis services rather than mocks.
+
+Run it locally after starting PostgreSQL and Redis and applying the environment variables:
+
+```bash
+cd projects/platform-api-stack/app
+npm install
+DATABASE_URL='postgres://platform_test:platform_test@localhost:5432/platform_test' \
+REDIS_URL='redis://localhost:6379' \
+npm run test:integration
+```
+
+The test runs the project's migration runner, verifies the notes schema and migration history, writes and reads a note in PostgreSQL, then exercises Redis set/get/delete cache behavior. Use a disposable test database: migrations create schema objects and the test writes a row. Do not point this test at production.
+
+GitHub Actions starts PostgreSQL 16 and Redis 7 service containers for the validation job and runs these integration tests before building images. The job uses ephemeral test credentials only.
+
+## Manual deployment workflow: AWS EKS or Azure AKS
+
+The separate workflow is `.github/workflows/deploy-platform-api-stack.yml`. It is intentionally **manual** and deploys only when dispatched from `main`. It supports either AWS EKS or Azure AKS, runs the database migration Job first, then deploys the API and web images with Helm. Configure a protected GitHub Environment named `production` with required reviewers before using it.
+
+### Common prerequisites
+
+1. The target Kubernetes cluster already exists and GitHub Actions can authenticate to it using workload identity federation (OIDC). Do not create long-lived cloud access keys for this workflow.
+2. The target namespace already exists.
+3. Create the Kubernetes Secrets before the first deployment:
+   - `platform-api-secrets` with `DATABASE_URL`, `REDIS_URL`, `OIDC_ISSUER`, and `OIDC_AUDIENCE`.
+   - `platform-web-secrets` with `OIDC_ISSUER`, `OIDC_CLIENT_ID`, `OIDC_CLIENT_SECRET`, `NEXTAUTH_SECRET`, and `NEXTAUTH_URL`.
+4. Ensure the cluster can pull the Docker Hub images. If the repositories are private, configure an imagePullSecret and extend the Helm Deployments and migration Job to use it.
+5. Configure the identity provider's exact production callback URL and audience before enabling user traffic.
+6. Configure GitHub repository secret `DOCKERHUB_USERNAME`. The CI workflow must have successfully published `platform-api:sha-<7-character-commit>` and `platform-web:sha-<7-character-commit>` for the selected main commit.
+7. Create a GitHub Environment called `production`; configure reviewers and deployment branch restrictions.
+
+### AWS EKS setup
+
+Create an IAM role trusted by GitHub's OIDC provider. Restrict the role trust policy to this repository and the `production` GitHub Environment subject (for example, `repo:amitweb2012/kubernetes-cheatsheet:environment:production`). Grant only the permissions needed to describe the selected EKS cluster and obtain its connection details; Kubernetes RBAC inside the cluster must separately grant the deployment identity permissions to manage the Helm release and migration Job in the target namespace.
+
+Add this GitHub repository secret:
+
+- `AWS_ROLE_ARN`: ARN of the IAM role configured for GitHub OIDC.
+
+The workflow uses the manually supplied AWS region and cluster name to run `aws eks update-kubeconfig`.
+
+### Azure AKS setup
+
+Configure a Microsoft Entra application/service principal with a federated identity credential trusting this GitHub repository's `production` Environment subject. Grant it the minimum Azure RBAC permissions to obtain AKS credentials. Configure Kubernetes RBAC/Azure RBAC to permit deployment operations in the target namespace.
+
+Add these GitHub repository secrets:
+
+- `AZURE_CLIENT_ID`: Entra application/client ID.
+- `AZURE_TENANT_ID`: Entra tenant ID.
+- `AZURE_SUBSCRIPTION_ID`: subscription ID (alternatively, provide it as the workflow input).
+
+The workflow uses `azure/login` with OIDC and then `az aks get-credentials`.
+
+### Run a deployment
+
+1. Merge and validate the application changes on `main`. Wait for the CI workflow to finish and confirm the matching Docker image tags exist.
+2. Open **GitHub → Actions → Deploy Platform API Stack → Run workflow**.
+3. Select `aws` or `azure`.
+4. Enter the cluster name and namespace. For AWS, enter the AWS region. For Azure, enter the resource group and optionally the subscription ID.
+5. Select **Run workflow** and approve the protected `production` environment deployment if prompted.
+6. Review the migration Job logs and Helm rollout result in the workflow run.
+7. Verify the application using the production health endpoints and complete the OAuth login and note read/write smoke tests.
+
+The workflow uses the same short SHA tag emitted by Docker Metadata Action (`sha-<7 characters>`), rather than deploying mutable `latest`. It runs `node src/db/migrate.js` in a one-off Job using the API image and the existing `platform-api-secrets` Secret before the Helm upgrade.
+
+### Deployment safety notes
+
+- The workflow is a deployment mechanism, not a complete production platform. Validate cluster access, network policy, ingress/TLS, storage, backups, monitoring and recovery before go-live.
+- The migration Job must be able to pull the selected API image and reach PostgreSQL. A failed migration blocks the Helm upgrade.
+- The workflow expects the namespace and Kubernetes Secrets to exist already; it does not create or populate secrets.
+- The chart's bundled PostgreSQL and Redis resources are still the default example topology. Review the chart and values for your managed-service setup before deploying to production.
+- The workflow uses `helm upgrade --install --atomic`; this rolls back Kubernetes resources on a failed Helm release, but it does not reverse a completed database migration. Use backward-compatible expand-and-contract migrations and maintain tested database backups.
+- Restrict the GitHub Environment to trusted branches and require human approval. Never expose production deployment credentials to untrusted pull requests.
